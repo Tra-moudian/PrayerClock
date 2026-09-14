@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f4ee">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>PrayerClock Web — V4 PWA</title>
+<style>
+:root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+.app{max-width:720px;margin:0 auto;padding:18px 18px 34px}
+.top{display:flex;gap:12px;align-items:end;justify-content:space-between;margin-bottom:10px}
+.brand{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#555}
+.citybox{min-width:250px}
+.citybox label{display:block;font-size:11px;font-weight:700;color:#666;margin-bottom:4px;text-align:right}
+select{width:100%;border:1px solid #d5d0c7;background:#fff;border-radius:10px;padding:10px 12px;font-weight:700}
+.card{background:var(--card);border:1px solid #e5e1d8;border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(35,25,15,.05)}
+.clockWrap{display:flex;justify-content:center;padding:6px 0 0}
+canvas{width:min(78vw,410px);height:min(78vw,410px);max-width:410px;max-height:410px}
+.date{text-align:center;font-weight:700;color:#555;margin-top:2px;margin-bottom:14px}
+.rule{height:1px;background:var(--line);margin:10px 0 14px}
+h2{text-align:center;font-size:20px;letter-spacing:.03em;margin:0 0 13px}
+.times{display:grid;grid-template-columns:1fr auto;column-gap:28px;row-gap:8px;max-width:430px;margin:0 auto}
+.name{font-size:18px;font-weight:700}
+.time{font-size:20px;min-width:72px;text-align:right;font-variant-numeric:tabular-nums}
+.blue{color:var(--blue);font-weight:800}
+.soft{color:#555}
+.next{margin-top:24px;text-align:center}
+.nextTitle{font-weight:800;color:var(--accent);font-size:20px;margin-bottom:12px}
+.countBox{background:linear-gradient(90deg,#92d84e 0%,#d7de38 48%,#ffbf2c 100%);border-radius:13px;padding:26px 18px;margin:0 auto;max-width:520px}
+.countdown{font-size:38px;font-weight:900;font-variant-numeric:tabular-nums;color:#ff1010;letter-spacing:.02em}
+.audioControls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.audioBtn{border:1px solid #cfc8bb;background:#fff;border-radius:9px;padding:8px 11px;font-weight:800;cursor:pointer}
+.audioBtn.on{background:#e9f7e6;border-color:#8cc97f;color:#235d1e}
+.status{font-size:12px;text-align:center;color:#777;margin-top:10px}
+.note{font-size:12px;color:#777;line-height:1.4;text-align:center;margin-top:16px}
+.advanced{margin-top:14px}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:700;color:#555}
+.advgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.advgrid label{font-size:12px;font-weight:700;color:#666}
+.advgrid input{width:100%;margin-top:4px;padding:8px;border:1px solid #d5d0c7;border-radius:8px;background:white}
+.legend{font-size:11px;color:#777;margin-top:10px;text-align:center}
+.installBtn{margin-left:8px;border:1px solid #cfc8bb;background:#fff;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;cursor:pointer}
+@media(min-width:900px){
+  .app{max-width:1060px}
+  .card{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;align-items:center;padding:26px}
+  .left{border-right:1px solid var(--line);padding-right:26px}
+  .right{padding-left:4px}
+  .rule{display:none}
+  .date{margin-bottom:0}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <div class="brand">PrayerClock Web · V4 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="citybox">
+      <label for="citySelect">VILLE</label>
+      <select id="citySelect"></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="left">
+      <div class="clockWrap"><canvas id="clock" width="500" height="500"></canvas></div>
+      <div class="date" id="dateLabel">—</div>
+    </div>
+
+    <div class="right">
+      <div class="rule"></div>
+      <h2>HORAIRES DU JOUR</h2>
+      <div class="times">
+        <div class="name soft">Imsak</div><div class="time soft" id="imsak">--:--</div>
+        <div class="name blue">Fajr</div><div class="time blue" id="fajr">--:--</div>
+        <div class="name">Lever du soleil</div><div class="time" id="sunrise">--:--</div>
+        <div class="name">Dhuhr</div><div class="time" id="dhuhr">--:--</div>
+        <div class="name">Asr</div><div class="time" id="asr">--:--</div>
+        <div class="name">Coucher du soleil</div><div class="time" id="sunset">--:--</div>
+        <div class="name blue">Maghrib</div><div class="time blue" id="maghrib">--:--</div>
+        <div class="name">Isha</div><div class="time" id="isha">--:--</div>
+        <div class="name">Midnight</div><div class="time" id="midnight">--:--</div>
+      </div>
+
+      <div class="next">
+        <div class="nextTitle" id="nextTitle">PROCHAINE PRIÈRE : —</div>
+        <div class="countBox"><div class="countdown" id="countdown">--:--:--</div></div>
+      </div>
+
+      <div class="audioControls">
+        <button id="adhanToggle" class="audioBtn">🔊 Activer l’adhan</button>
+        <button id="adhanTest" class="audioBtn">Tester</button>
+        <button id="adhanStop" class="audioBtn">Arrêter</button>
+      </div>
+      <audio id="adhanAudio" preload="auto" src="./adhan.mp3"></audio>
+      <div class="status" id="status">Calcul astronomique local</div>
+
+      <div class="advanced">
+        <details>
+          <summary>Paramètres du moteur</summary>
+          <div class="advgrid">
+            <label>Latitude<input id="lat" type="number" step="0.0001"></label>
+            <label>Longitude<input id="lon" type="number" step="0.0001"></label>
+            <label>Fuseau<input id="tz" type="text"></label>
+            <label>Imsak<input id="imsakAngle" type="number" step="0.01" value="-15.00"></label>
+            <label>Fajr<input id="fajrAngle" type="number" step="0.01" value="-9.84"></label>
+            <label>Maghrib<input id="maghribAngle" type="number" step="0.01" value="-4.00"></label>
+            <label>Isha<input id="ishaAngle" type="number" step="0.01" value="-14.00"></label>
+            <label>Asr coefficient<input id="asrCoef" type="number" step="0.000001" value="0.609504132231405"></label>
+          </div>
+          <div class="legend">Midnight Ja'fari : milieu entre le coucher du soleil et le Fajr suivant.</div>
+        </details>
+      </div>
+
+      <div class="note">Imsak −15° · Fajr −9,84° · Maghrib −4° · Isha −14° · Asr selon la formule du projet.</div>
+    </div>
+  </div>
+</div>
+
+<script src="./suncalc-lite.js"></script>
+<script>
+const CITIES = [
+  {name:"Aix-en-Provence",lat:43.5297,lon:5.4474,tz:"Europe/Paris"},
+  {name:"Amiens",lat:49.8941,lon:2.2958,tz:"Europe/Paris"},
+  {name:"Angers",lat:47.4784,lon:-0.5632,tz:"Europe/Paris"},
+  {name:"Annecy",lat:45.8992,lon:6.1294,tz:"Europe/Paris"},
+  {name:"Argenteuil",lat:48.9472,lon:2.2467,tz:"Europe/Paris"},
+  {name:"Aulnay-sous-Bois",lat:48.9385,lon:2.4907,tz:"Europe/Paris"},
+  {name:"Avignon",lat:43.9493,lon:4.8055,tz:"Europe/Paris"},
+  {name:"Besançon",lat:47.2378,lon:6.0241,tz:"Europe/Paris"},
+  {name:"Bordeaux",lat:44.8378,lon:-0.5792,tz:"Europe/Paris"},
+  {name:"Brest",lat:48.3904,lon:-4.4861,tz:"Europe/Paris"},
+  {name:"Bruxelles",lat:50.8503,lon:4.3517,tz:"Europe/Brussels"},
+  {name:"Caen",lat:49.1829,lon:-0.3707,tz:"Europe/Paris"},
+  {name:"Cannes",lat:43.5528,lon:7.0174,tz:"Europe/Paris"},
+  {name:"Chambéry",lat:45.5646,lon:5.9178,tz:"Europe/Paris"},
+  {name:"Clermont-Ferrand",lat:45.7772,lon:3.087,tz:"Europe/Paris"},
+  {name:"Créteil",lat:48.7904,lon:2.4556,tz:"Europe/Paris"},
+  {name:"Dijon",lat:47.322,lon:5.0415,tz:"Europe/Paris"},
+  {name:"Dunkerque",lat:51.0344,lon:2.3768,tz:"Europe/Paris"},
+  {name:"Evere — Chaussée de Louvain 1028",lat:50.8603896,lon:4.4207985,tz:"Europe/Brussels"},
+  {name:"Grenoble",lat:45.1885,lon:5.7245,tz:"Europe/Paris"},
+  {name:"La Rochelle",lat:46.1603,lon:-1.1511,tz:"Europe/Paris"},
+  {name:"Le Havre",lat:49.4944,lon:0.1079,tz:"Europe/Paris"},
+  {name:"Lille",lat:50.6292,lon:3.0573,tz:"Europe/Paris"},
+  {name:"Limoges",lat:45.8336,lon:1.2611,tz:"Europe/Paris"},
+  {name:"Lyon",lat:45.764,lon:4.8357,tz:"Europe/Paris"},
+  {name:"Marseille",lat:43.2965,lon:5.3698,tz:"Europe/Paris"},
+  {name:"Metz",lat:49.1193,lon:6.1757,tz:"Europe/Paris"},
+  {name:"Montpellier",lat:43.6108,lon:3.8767,tz:"Europe/Paris"},
+  {name:"Montreuil",lat:48.8638,lon:2.4485,tz:"Europe/Paris"},
+  {name:"Mulhouse",lat:47.7508,lon:7.3359,tz:"Europe/Paris"},
+  {name:"Nancy",lat:48.6921,lon:6.1844,tz:"Europe/Paris"},
+  {name:"Nanterre",lat:48.8924,lon:2.2067,tz:"Europe/Paris"},
+  {name:"Nantes",lat:47.2184,lon:-1.5536,tz:"Europe/Paris"},
+  {name:"Nice",lat:43.7102,lon:7.262,tz:"Europe/Paris"},
+  {name:"Nîmes",lat:43.8367,lon:4.3601,tz:"Europe/Paris"},
+  {name:"Orléans",lat:47.903,lon:1.9093,tz:"Europe/Paris"},
+  {name:"Paris",lat:48.8566,lon:2.3522,tz:"Europe/Paris"},
+  {name:"Pau",lat:43.2951,lon:-0.3708,tz:"Europe/Paris"},
+  {name:"Perpignan",lat:42.6887,lon:2.8948,tz:"Europe/Paris"},
+  {name:"Poitiers",lat:46.5802,lon:0.3404,tz:"Europe/Paris"},
+  {name:"Reims",lat:49.2583,lon:4.0317,tz:"Europe/Paris"},
+  {name:"Rennes",lat:48.1173,lon:-1.6778,tz:"Europe/Paris"},
+  {name:"Roubaix",lat:50.6927,lon:3.1746,tz:"Europe/Paris"},
+  {name:"Rouen",lat:49.4431,lon:1.0993,tz:"Europe/Paris"},
+  {name:"Saint-Denis (93)",lat:48.9362,lon:2.3574,tz:"Europe/Paris"},
+  {name:"Saint-Étienne",lat:45.4397,lon:4.3872,tz:"Europe/Paris"},
+  {name:"Strasbourg",lat:48.5734,lon:7.7521,tz:"Europe/Paris"},
+  {name:"Toulon",lat:43.1242,lon:5.928,tz:"Europe/Paris"},
+  {name:"Toulouse",lat:43.6047,lon:1.4442,tz:"Europe/Paris"},
+  {name:"Tourcoing",lat:50.7249,lon:3.1612,tz:"Europe/Paris"},
+  {name:"Tours",lat:47.3941,lon:0.6848,tz:"Europe/Paris"},
+  {name:"Versailles",lat:48.8049,lon:2.1204,tz:"Europe/Paris"},
+  {name:"Villeurbanne",lat:45.7719,lon:4.8902,tz:"Europe/Paris"}
+];
+
+const $=id=>document.getElementById(id);
+const citySelect=$("citySelect"),lat=$("lat"),lon=$("lon"),tz=$("tz");
+const imsakAngle=$("imsakAngle"),fajrAngle=$("fajrAngle"),maghribAngle=$("maghribAngle"),ishaAngle=$("ishaAngle"),asrCoef=$("asrCoef");
+
+CITIES.forEach(c=>{
+  const o=document.createElement("option");
+  o.value=c.name;o.textContent=c.name;
+  citySelect.appendChild(o);
+});
+
+function findCity(name){return CITIES.find(c=>c.name===name)}
+function useCity(c){
+  if(!c)return;
+  citySelect.value=c.name;
+  lat.value=c.lat;lon.value=c.lon;tz.value=c.tz;
+  localStorage.setItem("prayerclock.city",c.name);
+  calculate();
+}
+citySelect.addEventListener("change",()=>useCity(findCity(citySelect.value)));
+[lat,lon,tz,imsakAngle,fajrAngle,maghribAngle,ishaAngle,asrCoef].forEach(el=>el.addEventListener("change",calculate));
+
+function zoneParts(date,zone){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);
+  return Object.fromEntries(p.map(x=>[x.type,x.value]));
+}
+function localYMD(zone){const p=zoneParts(new Date(),zone);return {y:+p.year,m:+p.month,d:+p.day}}
+function formatHM(date,zone){if(!date)return "N/A";return new Intl.DateTimeFormat("fr-FR",{timeZone:zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(date)}
+function formatDate(date,zone){return new Intl.DateTimeFormat("fr-FR",{timeZone:zone,weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(date)}
+function altitude(date,la,lo){return SunCalc.getPosition(date,la,lo).altitude*180/Math.PI}
+
+function findCrossing(y,m,d,la,lo,target,phase){
+  const base=Date.UTC(y,m-1,d,12,0,0);
+  let start=base-18*3600000,end=base+18*3600000;
+  let pt=start,pv=altitude(new Date(pt),la,lo)-target;
+  const brackets=[];
+  for(let t=start+5*60000;t<=end;t+=5*60000){
+    const v=altitude(new Date(t),la,lo)-target;
+    if(pv===0||v===0||pv*v<0){
+      const rising=v>pv;
+      if((phase==="morning"&&rising)||(phase==="evening"&&!rising))brackets.push([pt,t]);
+    }
+    pt=t;pv=v;
+  }
+  if(!brackets.length)return null;
+  let [a,b]=brackets[0];
+  for(let i=0;i<32;i++){
+    const mid=(a+b)/2,va=altitude(new Date(a),la,lo)-target,vm=altitude(new Date(mid),la,lo)-target;
+    if(va*vm<=0)b=mid;else a=mid;
+  }
+  return new Date((a+b)/2);
+}
+
+function getDay(y,m,d,la,lo){
+  const st=SunCalc.getTimes(new Date(Date.UTC(y,m-1,d,12)),la,lo);
+  const imsak=findCrossing(y,m,d,la,lo,+imsakAngle.value,"morning");
+  const fajr=findCrossing(y,m,d,la,lo,+fajrAngle.value,"morning");
+  const maghrib=findCrossing(y,m,d,la,lo,+maghribAngle.value,"evening");
+  const isha=findCrossing(y,m,d,la,lo,+ishaAngle.value,"evening");
+  let asr=null;
+  if(st.sunset&&st.solarNoon){
+    const interval=st.sunset.getTime()-st.solarNoon.getTime();
+    asr=new Date(st.sunset.getTime()-interval*(+asrCoef.value));
+  }
+  return {imsak,fajr,sunrise:st.sunrise,dhuhr:st.solarNoon,asr,sunset:st.sunset,maghrib,isha};
+}
+
+let todayData=null,tomorrowData=null;
+function calculate(){
+  if(typeof SunCalc==="undefined"){$("status").textContent="SunCalc indisponible.";return}
+  const la=+lat.value,lo=+lon.value,zone=tz.value.trim(),q=localYMD(zone);
+  todayData=getDay(q.y,q.m,q.d,la,lo);
+  const nd=new Date(Date.UTC(q.y,q.m-1,q.d)+86400000);
+  tomorrowData=getDay(nd.getUTCFullYear(),nd.getUTCMonth()+1,nd.getUTCDate(),la,lo);
+  todayData.midnight=(todayData.sunset&&tomorrowData.fajr)?new Date(todayData.sunset.getTime()+(tomorrowData.fajr.getTime()-todayData.sunset.getTime())/2):null;
+
+  [["imsak","imsak"],["fajr","fajr"],["sunrise","sunrise"],["dhuhr","dhuhr"],["asr","asr"],["sunset","sunset"],["maghrib","maghrib"],["isha","isha"],["midnight","midnight"]]
+    .forEach(([id,key])=>$(id).textContent=formatHM(todayData[key],zone));
+
+  $("dateLabel").textContent=formatDate(new Date(),zone);
+  $("status").textContent=`${citySelect.value} · ${zone}`;
+  updateNext();
+}
+
+function updateNext(){
+  if(!todayData||!tomorrowData)return;
+  const now=new Date();
+  const events=[["FAJR",todayData.fajr],["DHUHR",todayData.dhuhr],["ASR",todayData.asr],["MAGHRIB",todayData.maghrib],["ISHA",todayData.isha],["FAJR",tomorrowData.fajr]]
+    .filter(x=>x[1]&&x[1]>now).sort((a,b)=>a[1]-b[1]);
+  if(!events.length)return;
+  const [name,when]=events[0];
+  $("nextTitle").textContent=`PROCHAINE PRIÈRE : ${name}`;
+  let s=Math.max(0,Math.floor((when-now)/1000));
+  const h=Math.floor(s/3600);s%=3600;const m=Math.floor(s/60),sec=s%60;
+  $("countdown").textContent=[h,m,sec].map(x=>String(x).padStart(2,"0")).join(":");
+}
+
+function drawClock(){
+  const c=$("clock"),ctx=c.getContext("2d"),W=c.width,cx=W/2,cy=W/2,R=W*.44;
+  ctx.clearRect(0,0,W,W);ctx.save();ctx.translate(cx,cy);
+  ctx.fillStyle="#fffdf8";ctx.strokeStyle="#171717";ctx.lineWidth=6;
+  ctx.beginPath();ctx.arc(0,0,R,0,Math.PI*2);ctx.fill();ctx.stroke();
+  for(let i=0;i<60;i++){
+    const a=i*Math.PI/30,major=i%5===0,r1=R-(major?26:14),r2=R-5;
+    ctx.lineWidth=major?5:2;ctx.strokeStyle=major?"#111":"#888";
+    ctx.beginPath();ctx.moveTo(Math.sin(a)*r1,-Math.cos(a)*r1);ctx.lineTo(Math.sin(a)*r2,-Math.cos(a)*r2);ctx.stroke();
+  }
+  ctx.font="bold 32px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle="#111";
+  for(let n=1;n<=12;n++){const a=n*Math.PI/6,r=R-58;ctx.fillText(n,Math.sin(a)*r,-Math.cos(a)*r)}
+  const p=zoneParts(new Date(),tz.value||"Europe/Paris"),hh=+p.hour%12,mm=+p.minute,ss=+p.second;
+  hand((hh+mm/60)*Math.PI/6,R*.50,10,"#111",18);
+  hand((mm+ss/60)*Math.PI/30,R*.72,7,"#111",22);
+  hand(ss*Math.PI/30,R*.80,3,"#c90000",28);
+  ctx.fillStyle="#c90000";ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,8,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.restore();
+  function hand(a,len,w,color,back){ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-Math.sin(a)*back,Math.cos(a)*back);ctx.lineTo(Math.sin(a)*len,-Math.cos(a)*len);ctx.stroke()}
+}
+
+
+// ============================================================
+// ADHAN
+// ============================================================
+const adhanAudio = $("adhanAudio");
+const adhanToggle = $("adhanToggle");
+const adhanTest = $("adhanTest");
+const adhanStop = $("adhanStop");
+
+let adhanEnabled = localStorage.getItem("prayerclock.adhanEnabled") === "1";
+let lastAdhanKey = localStorage.getItem("prayerclock.lastAdhanKey") || "";
+
+function refreshAdhanButton(){
+  adhanToggle.textContent = adhanEnabled ? "🔊 Adhan activé" : "🔇 Adhan désactivé";
+  adhanToggle.classList.toggle("on", adhanEnabled);
+}
+
+async function unlockAudio(){
+  // Un clic de l'utilisateur autorise le navigateur à utiliser l'audio.
+  try{
+    adhanAudio.volume = 0.01;
+    await adhanAudio.play();
+    adhanAudio.pause();
+    adhanAudio.currentTime = 0;
+    adhanAudio.volume = 1.0;
+  }catch(e){
+    adhanAudio.volume = 1.0;
+  }
+}
+
+adhanToggle.addEventListener("click", async ()=>{
+  adhanEnabled = !adhanEnabled;
+  localStorage.setItem("prayerclock.adhanEnabled", adhanEnabled ? "1" : "0");
+  if(adhanEnabled) await unlockAudio();
+  else {
+    adhanAudio.pause();
+    adhanAudio.currentTime = 0;
+  }
+  refreshAdhanButton();
+});
+
+adhanTest.addEventListener("click", async ()=>{
+  try{
+    adhanAudio.currentTime = 0;
+    adhanAudio.volume = 1.0;
+    await adhanAudio.play();
+  }catch(e){
+    alert("Le navigateur a bloqué le son. Clique d’abord sur « Activer l’adhan ».");
+  }
+});
+
+adhanStop.addEventListener("click", ()=>{
+  adhanAudio.pause();
+  adhanAudio.currentTime = 0;
+});
+
+function prayerEventsForAdhan(){
+  if(!todayData) return [];
+  return [
+    ["FAJR", todayData.fajr],
+    ["DHUHR", todayData.dhuhr],
+    ["ASR", todayData.asr],
+    ["MAGHRIB", todayData.maghrib],
+    ["ISHA", todayData.isha]
+  ].filter(x=>x[1]);
+}
+
+async function checkAdhan(){
+  if(!adhanEnabled || !todayData) return;
+
+  const now = new Date();
+
+  for(const [name, when] of prayerEventsForAdhan()){
+    const delta = now.getTime() - when.getTime();
+
+    // Fenêtre d'une minute : évite de manquer l'adhan si le navigateur
+    // ralentit momentanément les timers.
+    if(delta >= 0 && delta < 60000){
+      const p = zoneParts(when, tz.value || "Europe/Paris");
+      const key = `${p.year}-${p.month}-${p.day}:${name}`;
+
+      if(key !== lastAdhanKey){
+        lastAdhanKey = key;
+        localStorage.setItem("prayerclock.lastAdhanKey", key);
+
+        try{
+          adhanAudio.pause();
+          adhanAudio.currentTime = 0;
+          adhanAudio.volume = 1.0;
+          await adhanAudio.play();
+        }catch(e){
+          console.warn("Lecture automatique de l'adhan bloquée :", e);
+        }
+      }
+    }
+  }
+}
+
+refreshAdhanButton();
+
+const saved=findCity(localStorage.getItem("prayerclock.city"));
+useCity(saved||findCity("Paris"));
+setInterval(()=>{drawClock();updateNext();checkAdhan()},1000);
+drawClock();
+checkAdhan();
+
+let deferredInstallPrompt = null;
+const installBtn = $("installBtn");
+
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installBtn.hidden = false;
+});
+
+installBtn.addEventListener("click", async () => {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installBtn.hidden = true;
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  installBtn.hidden = true;
+});
+
+if ("serviceWorker" in navigator &&
+    (location.protocol === "https:" ||
+     location.hostname === "localhost" ||
+     location.hostname === "127.0.0.1")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js");
+  });
+}
+</script>
+</body>
+</html>
