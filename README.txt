@@ -27,3 +27,11 @@ ADHAN
 - Imsak, lever du soleil et Midnight ne déclenchent pas l'adhan.
 - Boutons Tester et Arrêter disponibles.
 - Les navigateurs peuvent limiter l'exécution/audio lorsqu'une page ou PWA est totalement fermée.
+
+
+V4.2 MOBILE
+- Corrige le débordement horizontal / déplacement gauche-droite.
+- Le libellé VILLE reste entièrement visible.
+- Le sélecteur de ville s'adapte à la largeur de l'écran.
+- Horloge et compte à rebours légèrement compactés sur smartphone.
+- La disposition ordinateur (> 899 px) reste inchangée.
