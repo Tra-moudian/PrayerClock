@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-3-next-prayer-fix";
+const CACHE="prayerclock-v4-4-notifications";
 const APP_SHELL=[
   "./",
   "./index.html",
@@ -33,6 +33,27 @@ self.addEventListener("fetch",event=>{
         caches.open(CACHE).then(cache=>cache.put(event.request,copy));
         return response;
       });
+    })
+  );
+});
+
+
+self.addEventListener("notificationclick", event => {
+  event.notification.close();
+
+  const targetUrl =
+    (event.notification.data && event.notification.data.url) ||
+    "./index.html";
+
+  event.waitUntil(
+    clients.matchAll({type:"window", includeUncontrolled:true}).then(windowClients => {
+      for(const client of windowClients){
+        if("focus" in client){
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      if(clients.openWindow) return clients.openWindow(targetUrl);
     })
   );
 });

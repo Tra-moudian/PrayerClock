@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V4.3 PWA</title>
+<title>PrayerClock Web — V4.4 PWA</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -35,6 +35,9 @@ h2{text-align:center;font-size:20px;letter-spacing:.03em;margin:0 0 13px}
 .countBox{background:linear-gradient(90deg,#92d84e 0%,#d7de38 48%,#ffbf2c 100%);border-radius:13px;padding:26px 18px;margin:0 auto;max-width:520px}
 .countdown{font-size:38px;font-weight:900;font-variant-numeric:tabular-nums;color:#ff1010;letter-spacing:.02em}
 .audioControls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.notifyControls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.notifyBtn{border:1px solid #cfc8bb;background:#fff;border-radius:9px;padding:8px 11px;font-weight:800;cursor:pointer}
+.notifyBtn.on{background:#e8f2ff;border-color:#78aef5;color:#174a8b}
 .audioBtn{border:1px solid #cfc8bb;background:#fff;border-radius:9px;padding:8px 11px;font-weight:800;cursor:pointer}
 .audioBtn.on{background:#e9f7e6;border-color:#8cc97f;color:#235d1e}
 .status{font-size:12px;text-align:center;color:#777;margin-top:10px}
@@ -173,7 +176,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V4.3 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V4.4 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <select id="citySelect"></select>
@@ -211,6 +214,12 @@ summary{cursor:pointer;font-weight:700;color:#555}
         <button id="adhanTest" class="audioBtn">Tester</button>
         <button id="adhanStop" class="audioBtn">Arrêter</button>
       </div>
+
+      <div class="notifyControls">
+        <button id="notifyToggle" class="notifyBtn">🔔 Activer les notifications</button>
+        <button id="notifyTest" class="notifyBtn">Tester notification</button>
+      </div>
+
       <audio id="adhanAudio" preload="auto" src="./adhan.mp3"></audio>
       <div class="status" id="status">Calcul astronomique local</div>
 
@@ -543,6 +552,108 @@ async function checkAdhan(){
 }
 
 refreshAdhanButton();
+
+// ============================================================
+// NOTIFICATIONS LOCALES — étape de test avant le serveur push
+// ============================================================
+const notifyToggle = $("notifyToggle");
+const notifyTest = $("notifyTest");
+
+function refreshNotifyButton(){
+  if(!("Notification" in window)){
+    notifyToggle.textContent = "Notifications non prises en charge";
+    notifyToggle.disabled = true;
+    notifyTest.disabled = true;
+    return;
+  }
+
+  if(Notification.permission === "granted"){
+    notifyToggle.textContent = "🔔 Notifications activées";
+    notifyToggle.classList.add("on");
+  } else if(Notification.permission === "denied"){
+    notifyToggle.textContent = "🔕 Notifications bloquées";
+    notifyToggle.classList.remove("on");
+  } else {
+    notifyToggle.textContent = "🔔 Activer les notifications";
+    notifyToggle.classList.remove("on");
+  }
+}
+
+async function getPrayerClockRegistration(){
+  if(!("serviceWorker" in navigator)) return null;
+
+  let reg = await navigator.serviceWorker.getRegistration();
+  if(!reg && (location.protocol === "https:" ||
+              location.hostname === "localhost" ||
+              location.hostname === "127.0.0.1")){
+    reg = await navigator.serviceWorker.register("./service-worker.js");
+    await navigator.serviceWorker.ready;
+  }
+  return reg;
+}
+
+notifyToggle.addEventListener("click", async ()=>{
+  if(!("Notification" in window)) return;
+
+  try{
+    const permission = await Notification.requestPermission();
+    refreshNotifyButton();
+
+    if(permission === "granted"){
+      const reg = await getPrayerClockRegistration();
+      if(reg){
+        await reg.showNotification("PrayerClock", {
+          body: "Les notifications sont activées.",
+          icon: "./icon-192.png",
+          badge: "./icon-192.png",
+          tag: "prayerclock-permission-test",
+          renotify: false,
+          data: { url: "./index.html" }
+        });
+      }
+    }
+  }catch(e){
+    console.warn("Erreur permission notification :", e);
+  }
+});
+
+notifyTest.addEventListener("click", async ()=>{
+  if(!("Notification" in window)){
+    alert("Ce navigateur ne prend pas en charge les notifications.");
+    return;
+  }
+
+  if(Notification.permission !== "granted"){
+    alert("Clique d’abord sur « Activer les notifications ».");
+    return;
+  }
+
+  try{
+    const cityName = citySelect.value || "PrayerClock";
+    const reg = await getPrayerClockRegistration();
+
+    if(reg){
+      await reg.showNotification("🕌 PrayerClock — test", {
+        body: `Notification reçue correctement pour ${cityName}.`,
+        icon: "./icon-192.png",
+        badge: "./icon-192.png",
+        tag: "prayerclock-manual-test",
+        renotify: true,
+        data: { url: "./index.html" }
+      });
+    } else {
+      new Notification("🕌 PrayerClock — test", {
+        body: `Notification reçue correctement pour ${cityName}.`,
+        icon: "./icon-192.png"
+      });
+    }
+  }catch(e){
+    console.warn("Erreur notification de test :", e);
+    alert("La notification n’a pas pu être envoyée.");
+  }
+});
+
+refreshNotifyButton();
 
 const saved=findCity(localStorage.getItem("prayerclock.city"));
 useCity(saved||findCity("Paris"));
