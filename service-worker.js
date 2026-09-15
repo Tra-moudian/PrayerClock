@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-1-adhan";
+const CACHE="prayerclock-v4-3-next-prayer-fix";
 const APP_SHELL=[
   "./",
   "./index.html",
