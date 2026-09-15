@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-2-mobile";
+const CACHE="prayerclock-v4-1-adhan";
 const APP_SHELL=[
   "./",
   "./index.html",

@@ -7,11 +7,10 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V4.2 PWA</title>
+<title>PrayerClock Web — V4 PWA</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
-html,body{width:100%;max-width:100%;overflow-x:hidden}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
 .app{max-width:720px;margin:0 auto;padding:18px 18px 34px}
 .top{display:flex;gap:12px;align-items:end;justify-content:space-between;margin-bottom:10px}
@@ -47,119 +46,6 @@ summary{cursor:pointer;font-weight:700;color:#555}
 .advgrid input{width:100%;margin-top:4px;padding:8px;border:1px solid #d5d0c7;border-radius:8px;background:white}
 .legend{font-size:11px;color:#777;margin-top:10px;text-align:center}
 .installBtn{margin-left:8px;border:1px solid #cfc8bb;background:#fff;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;cursor:pointer}
-
-@media(max-width:899px){
-  .app{
-    width:100%;
-    max-width:100%;
-    padding:8px 8px 18px;
-    overflow-x:hidden;
-  }
-
-  .top{
-    display:grid;
-    grid-template-columns:108px minmax(0,1fr);
-    gap:8px;
-    width:100%;
-    max-width:100%;
-    align-items:end;
-    margin-bottom:8px;
-  }
-
-  .brand{
-    min-width:0;
-    font-size:11px;
-    line-height:1.25;
-    letter-spacing:.10em;
-    overflow-wrap:anywhere;
-  }
-
-  .citybox{
-    min-width:0;
-    width:100%;
-    max-width:100%;
-  }
-
-  .citybox label{
-    font-size:9px;
-    margin:0 2px 3px 0;
-    white-space:nowrap;
-  }
-
-  select{
-    width:100%;
-    min-width:0;
-    max-width:100%;
-    font-size:14px;
-    padding:9px 30px 9px 10px;
-  }
-
-  .card,
-  .left,
-  .right,
-  .times,
-  .next,
-  .countBox,
-  .audioControls,
-  details{
-    min-width:0;
-    max-width:100%;
-  }
-
-  .card{
-    width:100%;
-    padding:14px 12px 16px;
-    border-radius:16px;
-  }
-
-  .clockWrap{padding-top:0}
-
-  canvas{
-    width:min(82vw,330px);
-    height:min(82vw,330px);
-  }
-
-  .date{
-    margin-top:0;
-    margin-bottom:10px;
-  }
-
-  .rule{margin:8px 4px 12px}
-
-  h2{font-size:19px}
-
-  .times{
-    column-gap:18px;
-    row-gap:7px;
-  }
-
-  .name{font-size:17px}
-  .time{font-size:19px}
-
-  .next{margin-top:20px}
-  .nextTitle{font-size:19px;margin-bottom:10px}
-
-  .countBox{
-    padding:20px 12px;
-    border-radius:12px;
-  }
-
-  .countdown{font-size:34px}
-
-  .audioControls{
-    gap:6px;
-    margin-top:12px;
-  }
-
-  .audioBtn{
-    padding:8px 9px;
-    font-size:12px;
-  }
-
-  .status{font-size:11px}
-  .note{font-size:11px}
-}
-
 @media(min-width:900px){
   .app{max-width:1060px}
   .card{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;align-items:center;padding:26px}
@@ -173,7 +59,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V4.2 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V4 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <select id="citySelect"></select>
