@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-4-notifications";
+const CACHE="prayerclock-v4-5-notifications-fix";
 const APP_SHELL=[
   "./",
   "./index.html",
@@ -56,4 +56,26 @@ self.addEventListener("notificationclick", event => {
       if(clients.openWindow) return clients.openWindow(targetUrl);
     })
   );
+});
+
+
+self.addEventListener("message", event => {
+  const data = event.data || {};
+  if(data.type === "SKIP_WAITING") { self.skipWaiting(); return; }
+  if(data.type === "SHOW_TEST_NOTIFICATION") {
+    const city = data.city || "PrayerClock";
+    const nonce = data.nonce || Date.now();
+    event.waitUntil(
+      self.registration.showNotification("🕌 PrayerClock — test", {
+        body: `Notification reçue correctement pour ${city}.`,
+        icon: "./icon-192.png",
+        badge: "./icon-192.png",
+        tag: "prayerclock-test-" + nonce,
+        vibrate: [200, 100, 200],
+        data: { url: "./index.html" }
+      }).then(() => {
+        if(event.source) event.source.postMessage({type:"NOTIFICATION_SHOWN"});
+      })
+    );
+  }
 });
