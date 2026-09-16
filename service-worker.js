@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-5-notifications-fix";
+const CACHE="prayerclock-v4-6-ville-recherche";
 const APP_SHELL=[
   "./",
   "./index.html",
