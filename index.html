@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V4.7 PWA</title>
+<title>PrayerClock Web — V4.8 PWA</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -194,7 +194,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V4.7 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V4.8 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <div class="cityCombo" id="cityCombo">
@@ -817,12 +817,28 @@ async function registerPhoneForPush(){
 
   let subscription = await reg.pushManager.getSubscription();
 
+  // Si la clé VAPID du serveur a changé, l'ancien abonnement Push
+  // n'est plus valable pour PrayerClock : on le recrée proprement.
+  const savedVapidKey = localStorage.getItem("prayerclock.vapidPublicKey");
+
+  if(subscription && savedVapidKey !== keyData.publicKey){
+    try{
+      await subscription.unsubscribe();
+    }catch(e){
+      console.warn("Impossible de désabonner l'ancienne souscription :", e);
+    }
+    subscription = null;
+    localStorage.removeItem("prayerclock.subscriberId");
+  }
+
   if(!subscription){
     subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
     });
   }
+
+  localStorage.setItem("prayerclock.vapidPublicKey", keyData.publicKey);
 
   const city = currentCity ? currentCity.name : citySelect.value;
 

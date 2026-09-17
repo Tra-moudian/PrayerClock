@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-7-push-test";
+const CACHE="prayerclock-v4-8-reabonnement-push";
 const APP_SHELL=[
   "./",
   "./index.html",
