@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-9-auto-notifications";
+const CACHE="prayerclock-v5-0-stable";
 const META_CACHE="prayerclock-meta";
 const PUSH_SERVER="https://prayerclock-notifications.tramoudian1963.workers.dev";
 const APP_SHELL=[
@@ -6,6 +6,7 @@ const APP_SHELL=[
   "./index.html",
   "./manifest.webmanifest",
   "./suncalc-lite.js",
+  "./cities.js",
   "./adhan.mp3",
   "./icon-192.png",
   "./icon-512.png"
@@ -27,9 +28,37 @@ self.addEventListener("activate",event=>{
 
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET") return;
+
+  const url = new URL(event.request.url);
+
+  // Le fichier de version ne doit jamais rester bloqué dans le cache.
+  if(url.pathname.endsWith("/version.json")){
+    event.respondWith(
+      fetch(event.request, {cache:"no-store"})
+    );
+    return;
+  }
+
+  // La liste des villes se met à jour facilement sans perdre
+  // la dernière copie disponible hors connexion.
+  if(url.pathname.endsWith("/cities.js")){
+    event.respondWith(
+      fetch(event.request, {cache:"no-store"})
+        .then(response=>{
+          const copy=response.clone();
+          caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+          return response;
+        })
+        .catch(()=>caches.match(event.request))
+    );
+    return;
+  }
+
+  // Le reste de l'application reste disponible hors ligne.
   event.respondWith(
     caches.match(event.request).then(cached=>{
       if(cached) return cached;
+
       return fetch(event.request).then(response=>{
         const copy=response.clone();
         caches.open(CACHE).then(cache=>cache.put(event.request,copy));
@@ -109,22 +138,6 @@ self.addEventListener("message", event => {
     return;
   }
 
-  if(data.type === "SHOW_TEST_NOTIFICATION") {
-    const city = data.city || "PrayerClock";
-    const nonce = data.nonce || Date.now();
-    event.waitUntil(
-      self.registration.showNotification("🕌 PrayerClock — test", {
-        body: `Notification reçue correctement pour ${city}.`,
-        icon: "./icon-192.png",
-        badge: "./icon-192.png",
-        tag: "prayerclock-test-" + nonce,
-        vibrate: [200, 100, 200],
-        data: { url: "./index.html" }
-      }).then(() => {
-        if(event.source) event.source.postMessage({type:"NOTIFICATION_SHOWN"});
-      })
-    );
-  }
 });
 
 

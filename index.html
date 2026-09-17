@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V4.9 PWA</title>
+<title>PrayerClock Web — V5.0 Stable</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -58,6 +58,32 @@ summary{cursor:pointer;font-weight:700;color:#555}
 .advgrid input{width:100%;margin-top:4px;padding:8px;border:1px solid #d5d0c7;border-radius:8px;background:white}
 .legend{font-size:11px;color:#777;margin-top:10px;text-align:center}
 .installBtn{margin-left:8px;border:1px solid #cfc8bb;background:#fff;border-radius:8px;padding:5px 8px;font-size:11px;font-weight:800;cursor:pointer}
+
+.updateBanner{
+  display:none;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 10px;
+  padding:10px 12px;
+  border:1px solid #9bbcea;
+  border-radius:11px;
+  background:#eef5ff;
+  color:#173f78;
+  font-size:13px;
+  font-weight:700;
+}
+.updateBanner.show{display:flex}
+.updateBtn{
+  flex:0 0 auto;
+  border:1px solid #6f9edc;
+  background:#fff;
+  color:#174a8b;
+  border-radius:8px;
+  padding:7px 10px;
+  font-weight:800;
+  cursor:pointer;
+}
 
 @media(max-width:899px){
   .app{
@@ -194,7 +220,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V4.9 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V5.0 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <div class="cityCombo" id="cityCombo">
@@ -207,6 +233,11 @@ summary{cursor:pointer;font-weight:700;color:#555}
         <div id="cityOptions" class="cityOptions" role="listbox"></div>
       </div>
     </div>
+  </div>
+
+  <div id="updateBanner" class="updateBanner">
+    <span id="updateText">Nouvelle version disponible.</span>
+    <button id="updateBtn" class="updateBtn" type="button">Mettre à jour</button>
   </div>
 
   <div class="card">
@@ -243,7 +274,6 @@ summary{cursor:pointer;font-weight:700;color:#555}
 
       <div class="notifyControls">
         <button id="notifyToggle" class="notifyBtn">🔔 Activer les notifications</button>
-        <button id="notifyTest" class="notifyBtn">Tester push serveur</button>
       </div>
       <div id="notifyStatus" style="text-align:center;font-size:12px;margin-top:6px;color:#6b655d"></div>
 
@@ -273,64 +303,81 @@ summary{cursor:pointer;font-weight:700;color:#555}
 </div>
 
 <script src="./suncalc-lite.js"></script>
+<script src="./cities.js"></script>
 <script>
-const CITIES = [
-  {name:"Aix-en-Provence",lat:43.5297,lon:5.4474,tz:"Europe/Paris"},
-  {name:"Amiens",lat:49.8941,lon:2.2958,tz:"Europe/Paris"},
-  {name:"Angers",lat:47.4784,lon:-0.5632,tz:"Europe/Paris"},
-  {name:"Annecy",lat:45.8992,lon:6.1294,tz:"Europe/Paris"},
-  {name:"Argenteuil",lat:48.9472,lon:2.2467,tz:"Europe/Paris"},
-  {name:"Aulnay-sous-Bois",lat:48.9385,lon:2.4907,tz:"Europe/Paris"},
-  {name:"Avignon",lat:43.9493,lon:4.8055,tz:"Europe/Paris"},
-  {name:"Besançon",lat:47.2378,lon:6.0241,tz:"Europe/Paris"},
-  {name:"Bordeaux",lat:44.8378,lon:-0.5792,tz:"Europe/Paris"},
-  {name:"Brest",lat:48.3904,lon:-4.4861,tz:"Europe/Paris"},
-  {name:"Bruxelles",lat:50.8503,lon:4.3517,tz:"Europe/Brussels"},
-  {name:"Caen",lat:49.1829,lon:-0.3707,tz:"Europe/Paris"},
-  {name:"Cannes",lat:43.5528,lon:7.0174,tz:"Europe/Paris"},
-  {name:"Chambéry",lat:45.5646,lon:5.9178,tz:"Europe/Paris"},
-  {name:"Clermont-Ferrand",lat:45.7772,lon:3.087,tz:"Europe/Paris"},
-  {name:"Créteil",lat:48.7904,lon:2.4556,tz:"Europe/Paris"},
-  {name:"Dijon",lat:47.322,lon:5.0415,tz:"Europe/Paris"},
-  {name:"Dunkerque",lat:51.0344,lon:2.3768,tz:"Europe/Paris"},
-  {name:"Evere — Chaussée de Louvain 1028",lat:50.8603896,lon:4.4207985,tz:"Europe/Brussels"},
-  {name:"Grenoble",lat:45.1885,lon:5.7245,tz:"Europe/Paris"},
-  {name:"La Rochelle",lat:46.1603,lon:-1.1511,tz:"Europe/Paris"},
-  {name:"Le Havre",lat:49.4944,lon:0.1079,tz:"Europe/Paris"},
-  {name:"Lille",lat:50.6292,lon:3.0573,tz:"Europe/Paris"},
-  {name:"Limoges",lat:45.8336,lon:1.2611,tz:"Europe/Paris"},
-  {name:"Lyon",lat:45.764,lon:4.8357,tz:"Europe/Paris"},
-  {name:"Marseille",lat:43.2965,lon:5.3698,tz:"Europe/Paris"},
-  {name:"Metz",lat:49.1193,lon:6.1757,tz:"Europe/Paris"},
-  {name:"Montpellier",lat:43.6108,lon:3.8767,tz:"Europe/Paris"},
-  {name:"Montreuil",lat:48.8638,lon:2.4485,tz:"Europe/Paris"},
-  {name:"Mulhouse",lat:47.7508,lon:7.3359,tz:"Europe/Paris"},
-  {name:"Nancy",lat:48.6921,lon:6.1844,tz:"Europe/Paris"},
-  {name:"Nanterre",lat:48.8924,lon:2.2067,tz:"Europe/Paris"},
-  {name:"Nantes",lat:47.2184,lon:-1.5536,tz:"Europe/Paris"},
-  {name:"Nice",lat:43.7102,lon:7.262,tz:"Europe/Paris"},
-  {name:"Nîmes",lat:43.8367,lon:4.3601,tz:"Europe/Paris"},
-  {name:"Orléans",lat:47.903,lon:1.9093,tz:"Europe/Paris"},
-  {name:"Paris",lat:48.8566,lon:2.3522,tz:"Europe/Paris"},
-  {name:"Pau",lat:43.2951,lon:-0.3708,tz:"Europe/Paris"},
-  {name:"Perpignan",lat:42.6887,lon:2.8948,tz:"Europe/Paris"},
-  {name:"Poitiers",lat:46.5802,lon:0.3404,tz:"Europe/Paris"},
-  {name:"Reims",lat:49.2583,lon:4.0317,tz:"Europe/Paris"},
-  {name:"Rennes",lat:48.1173,lon:-1.6778,tz:"Europe/Paris"},
-  {name:"Roubaix",lat:50.6927,lon:3.1746,tz:"Europe/Paris"},
-  {name:"Rouen",lat:49.4431,lon:1.0993,tz:"Europe/Paris"},
-  {name:"Saint-Denis (93)",lat:48.9362,lon:2.3574,tz:"Europe/Paris"},
-  {name:"Saint-Étienne",lat:45.4397,lon:4.3872,tz:"Europe/Paris"},
-  {name:"Strasbourg",lat:48.5734,lon:7.7521,tz:"Europe/Paris"},
-  {name:"Toulon",lat:43.1242,lon:5.928,tz:"Europe/Paris"},
-  {name:"Toulouse",lat:43.6047,lon:1.4442,tz:"Europe/Paris"},
-  {name:"Tourcoing",lat:50.7249,lon:3.1612,tz:"Europe/Paris"},
-  {name:"Tours",lat:47.3941,lon:0.6848,tz:"Europe/Paris"},
-  {name:"Versailles",lat:48.8049,lon:2.1204,tz:"Europe/Paris"},
-  {name:"Villeurbanne",lat:45.7719,lon:4.8902,tz:"Europe/Paris"}
-];
+const CITIES = window.PRAYERCLOCK_CITIES || [];
 
 const $=id=>document.getElementById(id);
+
+const APP_VERSION = "5.0";
+const updateBanner = $("updateBanner");
+const updateText = $("updateText");
+const updateBtn = $("updateBtn");
+
+async function checkPrayerClockUpdate(){
+  if(!navigator.onLine) return;
+
+  try{
+    const response = await fetch(
+      "./version.json?t=" + Date.now(),
+      {cache:"no-store"}
+    );
+
+    if(!response.ok) return;
+
+    const info = await response.json();
+
+    if(info.version && info.version !== APP_VERSION){
+      updateText.textContent =
+        `Nouvelle version disponible (${info.version}).`;
+      updateBanner.classList.add("show");
+    }
+  }catch(e){
+    // Hors ligne ou GitHub momentanément indisponible :
+    // PrayerClock continue simplement avec la version locale.
+  }
+}
+
+updateBtn.addEventListener("click", async ()=>{
+  updateBtn.disabled = true;
+  updateBtn.textContent = "Mise à jour…";
+
+  try{
+    const reg = await navigator.serviceWorker.getRegistration("./");
+
+    if(reg){
+      let reloading = false;
+
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        ()=>{
+          if(reloading) return;
+          reloading = true;
+          location.reload();
+        },
+        {once:true}
+      );
+
+      await reg.update();
+
+      if(reg.waiting){
+        reg.waiting.postMessage({type:"SKIP_WAITING"});
+      }
+
+      // Secours si le navigateur ne déclenche pas controllerchange.
+      setTimeout(()=>location.reload(),2500);
+    }else{
+      location.reload();
+    }
+  }catch(e){
+    updateBtn.disabled = false;
+    updateBtn.textContent = "Réessayer";
+  }
+});
+
+window.addEventListener("online", checkPrayerClockUpdate);
+setTimeout(checkPrayerClockUpdate, 1800);
+
 const citySelect=$("citySelect"),cityCombo=$("cityCombo"),cityDropBtn=$("cityDropBtn"),cityOptions=$("cityOptions");
 const lat=$("lat"),lon=$("lon"),tz=$("tz");
 const imsakAngle=$("imsakAngle"),fajrAngle=$("fajrAngle"),maghribAngle=$("maghribAngle"),ishaAngle=$("ishaAngle"),asrCoef=$("asrCoef");
@@ -722,12 +769,11 @@ async function checkAdhan(){
 refreshAdhanButton();
 
 // ============================================================
-// NOTIFICATIONS PUSH — V4.7
+// NOTIFICATIONS PUSH — VERSION STABLE
 // ============================================================
 const PUSH_SERVER = "https://prayerclock-notifications.tramoudian1963.workers.dev";
 
 const notifyToggle = $("notifyToggle");
-const notifyTest = $("notifyTest");
 const notifyStatus = $("notifyStatus");
 
 function setNotifyStatus(text){
@@ -822,7 +868,6 @@ function refreshNotifyButton(){
   if(!("Notification" in window) || !("PushManager" in window)){
     notifyToggle.textContent = "Notifications push non prises en charge";
     notifyToggle.disabled = true;
-    notifyTest.disabled = true;
     setNotifyStatus("Push non pris en charge sur ce navigateur.");
     return;
   }
@@ -933,35 +978,6 @@ async function registerPhoneForPush(){
   return result.subscriberId;
 }
 
-async function sendServerPushTest(){
-  let subscriberId = localStorage.getItem("prayerclock.subscriberId");
-
-  if(!subscriberId){
-    subscriberId = await registerPhoneForPush();
-  }
-
-  setNotifyStatus("Envoi du push de test depuis Cloudflare...");
-
-  const response = await fetch(PUSH_SERVER + "/test-push", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({subscriberId})
-  });
-
-  const result = await response.json();
-
-  if(!response.ok || !result.ok){
-    throw new Error(
-      result.error ||
-      `Push refusé par le service distant (${result.pushStatus || response.status}).`
-    );
-  }
-
-  setNotifyStatus(`Push serveur accepté (HTTP ${result.pushStatus}). Regarde les notifications Android.`);
-}
-
 notifyToggle.addEventListener("click", async ()=>{
   try{
     await registerPhoneForPush();
@@ -971,14 +987,6 @@ notifyToggle.addEventListener("click", async ()=>{
   }
 });
 
-notifyTest.addEventListener("click", async ()=>{
-  try{
-    await sendServerPushTest();
-  }catch(e){
-    console.warn("Erreur push de test :", e);
-    setNotifyStatus("Échec du test : " + e.message);
-  }
-});
 
 refreshNotifyButton();
 
