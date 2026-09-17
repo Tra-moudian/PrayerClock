@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V4.8 PWA</title>
+<title>PrayerClock Web — V4.9 PWA</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -194,7 +194,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V4.8 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V4.9 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <div class="cityCombo" id="cityCombo">
@@ -425,6 +425,14 @@ function useCity(c){
   tz.value=c.tz;
   localStorage.setItem("prayerclock.city",c.name);
   calculate();
+
+  if(localStorage.getItem("prayerclock.subscriberId")){
+    setTimeout(()=>{
+      syncExistingPushRegistration().catch(err=>{
+        console.warn("Synchronisation Push différée :", err);
+      });
+    },0);
+  }
 }
 
 function chooseCity(c){
@@ -756,6 +764,60 @@ async function ensurePrayerClockWorker(){
   return reg;
 }
 
+async function savePushContextToWorker(subscriberId){
+  if(!subscriberId) return;
+
+  const reg = await ensurePrayerClockWorker();
+  const worker = navigator.serviceWorker.controller || reg.active;
+
+  if(worker){
+    worker.postMessage({
+      type: "SAVE_PUSH_CONTEXT",
+      subscriberId
+    });
+  }
+}
+
+async function syncExistingPushRegistration(){
+  const subscriberId = localStorage.getItem("prayerclock.subscriberId");
+
+  if(
+    !subscriberId ||
+    Notification.permission !== "granted" ||
+    !("PushManager" in window)
+  ){
+    return;
+  }
+
+  const reg = await ensurePrayerClockWorker();
+  const subscription = await reg.pushManager.getSubscription();
+
+  if(!subscription) return;
+
+  const city = currentCity ? currentCity.name : citySelect.value;
+
+  const response = await fetch(PUSH_SERVER + "/subscribe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      subscription: subscription.toJSON(),
+      city,
+      latitude: Number(lat.value),
+      longitude: Number(lon.value),
+      timezone: tz.value
+    })
+  });
+
+  const result = await response.json();
+
+  if(response.ok && result.ok && result.subscriberId){
+    localStorage.setItem("prayerclock.subscriberId", result.subscriberId);
+    await savePushContextToWorker(result.subscriberId);
+  }
+}
+
 function refreshNotifyButton(){
   if(!("Notification" in window) || !("PushManager" in window)){
     notifyToggle.textContent = "Notifications push non prises en charge";
@@ -863,6 +925,7 @@ async function registerPhoneForPush(){
   }
 
   localStorage.setItem("prayerclock.subscriberId", result.subscriberId);
+  await savePushContextToWorker(result.subscriberId);
 
   setNotifyStatus(`Téléphone enregistré pour ${city}.`);
   refreshNotifyButton();
@@ -918,6 +981,12 @@ notifyTest.addEventListener("click", async ()=>{
 });
 
 refreshNotifyButton();
+
+setTimeout(()=>{
+  syncExistingPushRegistration().catch(err=>{
+    console.warn("Synchronisation Push au démarrage :", err);
+  });
+},1500);
 
 const saved=findCity(localStorage.getItem("prayerclock.city"));
 useCity(saved||findCity("Paris"));
