@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V5.0.1</title>
+<title>PrayerClock Web — V5.0.2</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -220,7 +220,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V5.0.1 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V5.0.2 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <div class="cityCombo" id="cityCombo">
@@ -309,7 +309,7 @@ const CITIES = window.PRAYERCLOCK_CITIES || [];
 
 const $=id=>document.getElementById(id);
 
-const APP_VERSION = "5.0.1";
+const APP_VERSION = "5.0.2";
 const updateBanner = $("updateBanner");
 const updateText = $("updateText");
 const updateBtn = $("updateBtn");
