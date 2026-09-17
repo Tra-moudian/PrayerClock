@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v5-0-stable";
+const CACHE="prayerclock-v5-0-1-update-test";
 const META_CACHE="prayerclock-meta";
 const PUSH_SERVER="https://prayerclock-notifications.tramoudian1963.workers.dev";
 const APP_SHELL=[
