@@ -1,4 +1,4 @@
-const CACHE="prayerclock-v4-6-ville-recherche";
+const CACHE="prayerclock-v4-7-push-test";
 const APP_SHELL=[
   "./",
   "./index.html",
@@ -78,4 +78,35 @@ self.addEventListener("message", event => {
       })
     );
   }
+});
+
+
+self.addEventListener("push", event => {
+  let title = "🕌 PrayerClock";
+  let body = "Notification reçue depuis le serveur PrayerClock.";
+  let data = { url: "./index.html" };
+
+  if(event.data){
+    try{
+      const payload = event.data.json();
+      title = payload.title || title;
+      body = payload.body || body;
+      data = payload.data || data;
+    }catch(e){
+      try{
+        body = event.data.text() || body;
+      }catch(_){}
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "./icon-192.png",
+      badge: "./icon-192.png",
+      tag: "prayerclock-server-push-" + Date.now(),
+      vibrate: [200, 100, 200],
+      data
+    })
+  );
 });

@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V4.6 PWA</title>
+<title>PrayerClock Web — V4.7 PWA</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -194,7 +194,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V4.6 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V4.7 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <div class="cityCombo" id="cityCombo">
@@ -243,7 +243,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 
       <div class="notifyControls">
         <button id="notifyToggle" class="notifyBtn">🔔 Activer les notifications</button>
-        <button id="notifyTest" class="notifyBtn">Tester notification</button>
+        <button id="notifyTest" class="notifyBtn">Tester push serveur</button>
       </div>
       <div id="notifyStatus" style="text-align:center;font-size:12px;margin-top:6px;color:#6b655d"></div>
 
@@ -714,72 +714,193 @@ async function checkAdhan(){
 refreshAdhanButton();
 
 // ============================================================
-// NOTIFICATIONS — V4.5 : test envoyé directement par le service worker
+// NOTIFICATIONS PUSH — V4.7
 // ============================================================
+const PUSH_SERVER = "https://prayerclock-notifications.tramoudian1963.workers.dev";
+
 const notifyToggle = $("notifyToggle");
 const notifyTest = $("notifyTest");
 const notifyStatus = $("notifyStatus");
-function setNotifyStatus(text){ notifyStatus.textContent = text || ""; }
-function refreshNotifyButton(){
-  if(!("Notification" in window)){
-    notifyToggle.textContent = "Notifications non prises en charge";
-    notifyToggle.disabled = true; notifyTest.disabled = true;
-    setNotifyStatus("Notifications non prises en charge sur ce navigateur."); return;
-  }
-  if(Notification.permission === "granted"){
-    notifyToggle.textContent = "🔔 Notifications activées";
-    notifyToggle.classList.add("on"); setNotifyStatus("Autorisation accordée.");
-  } else if(Notification.permission === "denied"){
-    notifyToggle.textContent = "🔕 Notifications bloquées";
-    notifyToggle.classList.remove("on"); setNotifyStatus("Autorisation bloquée dans Android/Chrome.");
-  } else {
-    notifyToggle.textContent = "🔔 Activer les notifications";
-    notifyToggle.classList.remove("on"); setNotifyStatus("");
-  }
+
+function setNotifyStatus(text){
+  notifyStatus.textContent = text || "";
 }
+
+function urlBase64ToUint8Array(base64String){
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(ch => ch.charCodeAt(0)));
+}
+
 async function ensurePrayerClockWorker(){
-  if(!("serviceWorker" in navigator)) throw new Error("Service worker non pris en charge.");
+  if(!("serviceWorker" in navigator)){
+    throw new Error("Service worker non pris en charge.");
+  }
+
   let reg = await navigator.serviceWorker.getRegistration("./");
-  if(!reg) reg = await navigator.serviceWorker.register("./service-worker.js", {scope:"./"});
+
+  if(!reg){
+    reg = await navigator.serviceWorker.register("./service-worker.js", {scope:"./"});
+  }
+
   reg = await navigator.serviceWorker.ready;
-  if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"});
+
+  if(reg.waiting){
+    reg.waiting.postMessage({type:"SKIP_WAITING"});
+  }
+
   return reg;
 }
-async function sendTestNotification(){
-  const reg = await ensurePrayerClockWorker();
-  const worker = navigator.serviceWorker.controller || reg.active;
-  if(worker){
-    worker.postMessage({type:"SHOW_TEST_NOTIFICATION", city:(currentCity ? currentCity.name : citySelect.value) || "PrayerClock", nonce:Date.now()});
-    setNotifyStatus("Notification envoyée au système Android.");
+
+function refreshNotifyButton(){
+  if(!("Notification" in window) || !("PushManager" in window)){
+    notifyToggle.textContent = "Notifications push non prises en charge";
+    notifyToggle.disabled = true;
+    notifyTest.disabled = true;
+    setNotifyStatus("Push non pris en charge sur ce navigateur.");
     return;
   }
-  await reg.showNotification("🕌 PrayerClock — test", {
-    body:`Notification reçue correctement pour ${(currentCity ? currentCity.name : citySelect.value) || "PrayerClock"}.`,
-    icon:"./icon-192.png", badge:"./icon-192.png",
-    tag:"prayerclock-test-" + Date.now(), vibrate:[200,100,200], data:{url:"./index.html"}
-  });
-  setNotifyStatus("Notification envoyée au système Android.");
+
+  const subscriberId = localStorage.getItem("prayerclock.subscriberId");
+
+  if(Notification.permission === "granted" && subscriberId){
+    notifyToggle.textContent = "🔔 Notifications serveur activées";
+    notifyToggle.classList.add("on");
+    setNotifyStatus("Téléphone enregistré sur le serveur PrayerClock.");
+  }else if(Notification.permission === "granted"){
+    notifyToggle.textContent = "🔔 Enregistrer ce téléphone";
+    notifyToggle.classList.remove("on");
+    setNotifyStatus("Autorisation Android accordée. Téléphone non encore enregistré.");
+  }else if(Notification.permission === "denied"){
+    notifyToggle.textContent = "🔕 Notifications bloquées";
+    notifyToggle.classList.remove("on");
+    setNotifyStatus("Autorisation bloquée dans Android/Chrome.");
+  }else{
+    notifyToggle.textContent = "🔔 Activer les notifications";
+    notifyToggle.classList.remove("on");
+    setNotifyStatus("");
+  }
 }
+
+async function registerPhoneForPush(){
+  if(!("Notification" in window) || !("PushManager" in window)){
+    throw new Error("Notifications Push non prises en charge.");
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if(permission !== "granted"){
+    throw new Error("Autorisation de notification non accordée.");
+  }
+
+  setNotifyStatus("Connexion au serveur PrayerClock...");
+
+  const reg = await ensurePrayerClockWorker();
+
+  const keyResponse = await fetch(PUSH_SERVER + "/vapid-public-key", {
+    cache: "no-store"
+  });
+
+  if(!keyResponse.ok){
+    throw new Error("Impossible de récupérer la clé Push.");
+  }
+
+  const keyData = await keyResponse.json();
+
+  if(!keyData.ok || !keyData.publicKey){
+    throw new Error("Clé Push invalide.");
+  }
+
+  let subscription = await reg.pushManager.getSubscription();
+
+  if(!subscription){
+    subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(keyData.publicKey)
+    });
+  }
+
+  const city = currentCity ? currentCity.name : citySelect.value;
+
+  const response = await fetch(PUSH_SERVER + "/subscribe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      subscription: subscription.toJSON(),
+      city,
+      latitude: Number(lat.value),
+      longitude: Number(lon.value),
+      timezone: tz.value
+    })
+  });
+
+  const result = await response.json();
+
+  if(!response.ok || !result.ok || !result.subscriberId){
+    throw new Error(result.error || "Enregistrement du téléphone impossible.");
+  }
+
+  localStorage.setItem("prayerclock.subscriberId", result.subscriberId);
+
+  setNotifyStatus(`Téléphone enregistré pour ${city}.`);
+  refreshNotifyButton();
+
+  return result.subscriberId;
+}
+
+async function sendServerPushTest(){
+  let subscriberId = localStorage.getItem("prayerclock.subscriberId");
+
+  if(!subscriberId){
+    subscriberId = await registerPhoneForPush();
+  }
+
+  setNotifyStatus("Envoi du push de test depuis Cloudflare...");
+
+  const response = await fetch(PUSH_SERVER + "/test-push", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({subscriberId})
+  });
+
+  const result = await response.json();
+
+  if(!response.ok || !result.ok){
+    throw new Error(
+      result.error ||
+      `Push refusé par le service distant (${result.pushStatus || response.status}).`
+    );
+  }
+
+  setNotifyStatus(`Push serveur accepté (HTTP ${result.pushStatus}). Regarde les notifications Android.`);
+}
+
 notifyToggle.addEventListener("click", async ()=>{
-  if(!("Notification" in window)) return;
   try{
-    const permission = await Notification.requestPermission();
-    refreshNotifyButton();
-    if(permission === "granted"){
-      await ensurePrayerClockWorker();
-      setNotifyStatus("Notifications autorisées. Tu peux lancer le test.");
-    }
-  }catch(e){ console.warn(e); setNotifyStatus("Erreur : " + e.message); }
+    await registerPhoneForPush();
+  }catch(e){
+    console.warn("Erreur abonnement Push :", e);
+    setNotifyStatus("Échec : " + e.message);
+  }
 });
+
 notifyTest.addEventListener("click", async ()=>{
-  if(!("Notification" in window)){ alert("Ce navigateur ne prend pas en charge les notifications."); return; }
-  if(Notification.permission !== "granted"){ alert("Clique d’abord sur « Activer les notifications »."); return; }
-  try{ await sendTestNotification(); }
-  catch(e){ console.warn(e); setNotifyStatus("Échec du test : " + e.message); alert("La notification n’a pas pu être envoyée."); }
+  try{
+    await sendServerPushTest();
+  }catch(e){
+    console.warn("Erreur push de test :", e);
+    setNotifyStatus("Échec du test : " + e.message);
+  }
 });
-navigator.serviceWorker?.addEventListener("message", event=>{
-  if(event.data?.type === "NOTIFICATION_SHOWN") setNotifyStatus("Notification créée par le service worker.");
-});
+
 refreshNotifyButton();
 
 const saved=findCity(localStorage.getItem("prayerclock.city"));
