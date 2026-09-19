@@ -7,7 +7,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
-<title>PrayerClock Web — V5.0.2</title>
+<title>PrayerClock Web — V5.0.3</title>
 <style>
 :root{--bg:#f7f4ee;--card:#fffdf8;--ink:#161616;--blue:#0057ff;--line:#dedbd4;--accent:#3c2864}
 *{box-sizing:border-box}
@@ -220,7 +220,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand">PrayerClock Web · V5.0.2 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
+    <div class="brand">PrayerClock Web · V5.0.3 <button id="installBtn" class="installBtn" hidden>Installer</button></div>
     <div class="citybox">
       <label for="citySelect">VILLE</label>
       <div class="cityCombo" id="cityCombo">
@@ -271,6 +271,7 @@ summary{cursor:pointer;font-weight:700;color:#555}
         <button id="adhanTest" class="audioBtn">Tester</button>
         <button id="adhanStop" class="audioBtn">Arrêter</button>
       </div>
+      <div id="adhanStatus" style="text-align:center;font-size:12px;margin-top:6px;color:#6b655d"></div>
 
       <div class="notifyControls">
         <button id="notifyToggle" class="notifyBtn">🔔 Activer les notifications</button>
@@ -309,7 +310,7 @@ const CITIES = window.PRAYERCLOCK_CITIES || [];
 
 const $=id=>document.getElementById(id);
 
-const APP_VERSION = "5.0.2";
+const APP_VERSION = "5.0.3";
 const updateBanner = $("updateBanner");
 const updateText = $("updateText");
 const updateBtn = $("updateBtn");
@@ -670,52 +671,120 @@ function drawClock(){
 
 
 // ============================================================
-// ADHAN
+// ADHAN — V5.0.3
 // ============================================================
 const adhanAudio = $("adhanAudio");
 const adhanToggle = $("adhanToggle");
 const adhanTest = $("adhanTest");
 const adhanStop = $("adhanStop");
+const adhanStatus = $("adhanStatus");
 
 let adhanEnabled = localStorage.getItem("prayerclock.adhanEnabled") === "1";
 let lastAdhanKey = localStorage.getItem("prayerclock.lastAdhanKey") || "";
+let audioArmedThisSession = false;
+let audioArmInProgress = false;
+
+function setAdhanStatus(text){
+  adhanStatus.textContent = text || "";
+}
 
 function refreshAdhanButton(){
   adhanToggle.textContent = adhanEnabled ? "🔊 Adhan activé" : "🔇 Adhan désactivé";
   adhanToggle.classList.toggle("on", adhanEnabled);
+
+  if(!adhanEnabled){
+    setAdhanStatus("");
+  }else if(audioArmedThisSession){
+    setAdhanStatus("Adhan prêt pour le déclenchement automatique.");
+  }else{
+    setAdhanStatus("Adhan activé · touche une fois l’écran après ouverture pour autoriser le son.");
+  }
 }
 
 async function unlockAudio(){
-  // Un clic de l'utilisateur autorise le navigateur à utiliser l'audio.
+  if(!adhanEnabled || audioArmedThisSession || audioArmInProgress) return audioArmedThisSession;
+
+  audioArmInProgress = true;
+
   try{
-    adhanAudio.volume = 0.01;
-    await adhanAudio.play();
+    const previousVolume = adhanAudio.volume;
     adhanAudio.pause();
     adhanAudio.currentTime = 0;
-    adhanAudio.volume = 1.0;
+    adhanAudio.volume = 0.01;
+
+    await adhanAudio.play();
+
+    adhanAudio.pause();
+    adhanAudio.currentTime = 0;
+    adhanAudio.volume = previousVolume || 1.0;
+
+    audioArmedThisSession = true;
+    refreshAdhanButton();
+    return true;
   }catch(e){
     adhanAudio.volume = 1.0;
+    audioArmedThisSession = false;
+    refreshAdhanButton();
+    return false;
+  }finally{
+    audioArmInProgress = false;
   }
 }
+
+// Sur mobile, un geste utilisateur peut être requis à chaque nouvelle session
+// avant qu'un script puisse lancer un son. On arme donc l'adhan au premier
+// geste ordinaire effectué dans PrayerClock.
+async function armAdhanFromUserGesture(event){
+  if(!adhanEnabled || audioArmedThisSession || audioArmInProgress) return;
+
+  const target = event.target;
+  if(target && (
+    target.closest?.("#adhanToggle") ||
+    target.closest?.("#adhanTest") ||
+    target.closest?.("#adhanStop")
+  )){
+    return;
+  }
+
+  const ok = await unlockAudio();
+  if(ok){
+    // Si le geste intervient juste après l'heure de prière,
+    // on retente immédiatement le déclenchement.
+    checkAdhan();
+  }
+}
+
+window.addEventListener("pointerdown", armAdhanFromUserGesture, {capture:true, passive:true});
+window.addEventListener("keydown", armAdhanFromUserGesture, {capture:true});
 
 adhanToggle.addEventListener("click", async ()=>{
   adhanEnabled = !adhanEnabled;
   localStorage.setItem("prayerclock.adhanEnabled", adhanEnabled ? "1" : "0");
-  if(adhanEnabled) await unlockAudio();
-  else {
+
+  if(adhanEnabled){
+    await unlockAudio();
+  }else{
+    audioArmedThisSession = false;
     adhanAudio.pause();
     adhanAudio.currentTime = 0;
   }
+
   refreshAdhanButton();
 });
 
 adhanTest.addEventListener("click", async ()=>{
   try{
+    adhanAudio.pause();
     adhanAudio.currentTime = 0;
     adhanAudio.volume = 1.0;
     await adhanAudio.play();
+
+    // Le clic de test est aussi un geste utilisateur valide :
+    // à partir de là le déclenchement automatique est armé pour la session.
+    audioArmedThisSession = true;
+    refreshAdhanButton();
   }catch(e){
-    alert("Le navigateur a bloqué le son. Clique d’abord sur « Activer l’adhan ».");
+    setAdhanStatus("Le navigateur a bloqué le son. Réessaie après avoir touché l’écran.");
   }
 });
 
@@ -726,6 +795,7 @@ adhanStop.addEventListener("click", ()=>{
 
 function prayerEventsForAdhan(){
   if(!todayData) return [];
+
   return [
     ["FAJR", todayData.fajr],
     ["DHUHR", todayData.dhuhr],
@@ -743,24 +813,37 @@ async function checkAdhan(){
   for(const [name, when] of prayerEventsForAdhan()){
     const delta = now.getTime() - when.getTime();
 
-    // Fenêtre d'une minute : évite de manquer l'adhan si le navigateur
-    // ralentit momentanément les timers.
-    if(delta >= 0 && delta < 60000){
+    // Fenêtre de deux minutes : tolère un court ralentissement/sommeil
+    // de la PWA sans déclencher un adhan très en retard.
+    if(delta >= 0 && delta < 120000){
       const p = zoneParts(when, tz.value || "Europe/Paris");
       const key = `${p.year}-${p.month}-${p.day}:${name}`;
 
-      if(key !== lastAdhanKey){
+      if(key === lastAdhanKey) continue;
+
+      try{
+        adhanAudio.pause();
+        adhanAudio.currentTime = 0;
+        adhanAudio.volume = 1.0;
+
+        await adhanAudio.play();
+
+        // IMPORTANT : on ne marque la prière comme jouée qu'après
+        // réussite réelle de play(). Avant, un blocage navigateur
+        // pouvait faire perdre définitivement l'adhan.
         lastAdhanKey = key;
         localStorage.setItem("prayerclock.lastAdhanKey", key);
 
-        try{
-          adhanAudio.pause();
-          adhanAudio.currentTime = 0;
-          adhanAudio.volume = 1.0;
-          await adhanAudio.play();
-        }catch(e){
-          console.warn("Lecture automatique de l'adhan bloquée :", e);
-        }
+        audioArmedThisSession = true;
+        refreshAdhanButton();
+
+      }catch(e){
+        console.warn("Lecture automatique de l'adhan bloquée :", e);
+
+        // Ne pas enregistrer lastAdhanKey ici : PrayerClock retentera
+        // pendant toute la fenêtre des deux minutes.
+        audioArmedThisSession = false;
+        setAdhanStatus("Adhan prêt, mais le son automatique est bloqué : touche l’écran une fois.");
       }
     }
   }
