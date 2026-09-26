@@ -18,6 +18,7 @@ window.PRAYERCLOCK_CITIES = [
   {name:"Bruxelles",lat:50.8503,lon:4.3517,tz:"Europe/Brussels"},
   {name:"Caen",lat:49.1829,lon:-0.3707,tz:"Europe/Paris"},
   {name:"Cannes",lat:43.5528,lon:7.0174,tz:"Europe/Paris"},
+  {name:"Cérenes",lat:48.9155,lon:-1.4372,tz:"Europe/Paris"},
   {name:"Chambéry",lat:45.5646,lon:5.9178,tz:"Europe/Paris"},
   {name:"Clermont-Ferrand",lat:45.7772,lon:3.087,tz:"Europe/Paris"},
   {name:"Créteil",lat:48.7904,lon:2.4556,tz:"Europe/Paris"},
